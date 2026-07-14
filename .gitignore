@@ -6,3 +6,6 @@ debug
 foo.*
 *.log
 data
+
+# machine/project-specific local overrides — kept local, not exported
+lua/plugins/clangd.lua

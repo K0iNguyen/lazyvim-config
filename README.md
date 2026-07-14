@@ -17,7 +17,6 @@ Standard LazyVim starter layout (`init.lua` → `lua/config/*` → `lua/plugins/
 | `snacks.lua` + `neo-tree.lua` | snacks explorer docked on the right; open files without leaving the explorer |
 | `persistence.lua` | Session save/restore — `<leader>qs` (cwd), `<leader>ql` (last), `<leader>qd` (disable) |
 | `scope.lua` | Per-tab buffer scoping (scope.nvim) |
-| `clangd.lua` | clangd tuned for embedded C/C++ (ESP32) — **machine-specific, see [Per-machine adjustments](#per-machine-adjustments)** |
 
 Plus `lua/config/options.lua` enables `undofile`, and `lua/config/autocmds.lua` auto-saves the buffer on `InsertLeave` / `TextChanged` / `FocusLost`.
 
@@ -135,48 +134,48 @@ classic WSL:  install win32yank.exe from github.com/equalsraf/win32yank, put it 
 
 ## Install on a new computer
 
-This repo **is** the config; `~/.config/nvim` is just a symlink pointing at it.
+This is a **LazyVim** config, so setup is the standard [LazyVim installation](https://lazyvim.github.io/installation) with this repo standing in for the LazyVim starter. You do **not** clone the LazyVim starter separately — cloning this repo and launching Neovim bootstraps `lazy.nvim`, which then installs LazyVim itself and every plugin at the versions pinned in `lazy-lock.json`. This repo **is** the config; `~/.config/nvim` is just a symlink pointing at it.
+
+**1. Install the prerequisites** — Neovim **≥ 0.11.2** and the [Core tools](#core) (git, a C compiler, ripgrep, fd, a Nerd Font, lazygit). Nothing below works until these are on the machine; see [Requirements](#requirements) for per-OS commands.
+
+**2. Clear any existing Neovim files** — LazyVim expects a clean state on first run. Back up the four Neovim directories if they exist (safe to skip on a brand-new machine that has never run Neovim):
 
 ```bash
-# 1. Clone (SSH shown; use the https URL if you don't have SSH keys on this machine)
+mv ~/.config/nvim{,.bak}        2>/dev/null   # config
+mv ~/.local/share/nvim{,.bak}   2>/dev/null   # plugins & data
+mv ~/.local/state/nvim{,.bak}   2>/dev/null   # sessions, undo, shada
+mv ~/.cache/nvim{,.bak}         2>/dev/null   # cache
+```
+
+**3. Clone this config and symlink it into place** (this replaces LazyVim's "clone the starter" step):
+
+```bash
+# SSH shown; use the https URL if you don't have SSH keys on this machine
 git clone git@github.com:K0iNguyen/lazyvim-config.git ~/nvim-config
 #   https alternative:
 #   git clone https://github.com/K0iNguyen/lazyvim-config.git ~/nvim-config
 
-# 2. Back up any existing config, then symlink ~/.config/nvim -> the repo
-[ -e ~/.config/nvim ] && mv ~/.config/nvim ~/.config/nvim.bak
 mkdir -p ~/.config
 ln -s ~/nvim-config ~/.config/nvim
+```
 
-# 3. Launch Neovim — lazy.nvim bootstraps itself and installs every plugin
+**4. Launch Neovim** — `lazy.nvim` bootstraps itself, installs LazyVim and every plugin, then reads `lazy-lock.json` so you get the exact versions from this repo:
+
+```bash
 nvim
 ```
 
-On first launch, let lazy.nvim finish syncing (it reads `lazy-lock.json`, so you get the exact plugin versions from this repo). Then:
+Once syncing finishes:
 
 - `:checkhealth` — confirm the Neovim version and that ripgrep / fd / node / etc. are detected
 - `:Mason` — install/verify language servers for the languages you use
 - `:LazyExtras` — view or toggle the enabled extras
 
-## Per-machine adjustments
+## Local (machine-specific) overrides
 
-Only one file is machine-specific: **`lua/plugins/clangd.lua`** (my ESP32 / embedded C++ setup). It will **not** crash Neovim if the paths are wrong — clangd simply skips cross-compile driver detection — but for full C/C++ support on another machine, adjust:
+Project- or machine-specific tweaks are **not** committed, so they don't propagate to your other computers. `lua/plugins/clangd.lua` (an embedded C/C++ / ESP32 clangd override tied to one machine) is `.gitignore`d for exactly this reason — it stays local.
 
-1. `--compile-commands-dir=build_wsl` → wherever your project generates `compile_commands.json` (e.g. `build`, `build_host`, or a CMake preset's build dir).
-2. `--query-driver=/home/khoinguyen/.espressif/.../xtensa-esp32s3-elf-gcc,...` → your own ESP-IDF toolchain path (the username, the `esp-…` version directory, and the target may all differ). If you don't do embedded work on that machine, you can delete the whole `opts.servers.clangd.cmd` override.
-
-To cut down on per-machine editing, you can make the home-dir portion dynamic — this keeps identical behavior on the original machine:
-
-```lua
-local home = vim.fn.expand("~")
-opts.servers.clangd.cmd = {
-  "clangd",
-  "--compile-commands-dir=build_wsl",
-  "--background-index",
-  "--query-driver=" .. home .. "/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20251107/xtensa-esp-elf/bin/xtensa-esp32s3-elf-gcc,"
-    .. home .. "/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20251107/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++",
-}
-```
+To add your own machine-only override on any computer: drop a spec file under `lua/plugins/` and add its path to `.gitignore`. `lazy.nvim` still loads it locally, but git ignores it so it never gets committed or pushed.
 
 ## Syncing your changes
 
