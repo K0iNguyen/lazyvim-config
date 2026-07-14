@@ -62,7 +62,21 @@ brew install --cask font-jetbrains-mono-nerd-font
 sudo pacman -S neovim git base-devel curl unzip ripgrep fd lazygit ttf-jetbrains-mono-nerd-font
 ```
 
-> **Nerd Font is a terminal setting, not something Neovim installs.** Install a Nerd Font (e.g. JetBrainsMono) on the host and select it as your terminal emulator's font. Under WSL, set the font in Windows Terminal / VS Code — not inside Linux.
+```powershell
+# Windows (PowerShell) — winget ships with Windows 10/11
+winget install --id Neovim.Neovim -e
+winget install --id Git.Git -e
+winget install --id BurntSushi.ripgrep.MSVC -e
+winget install --id sharkdp.fd -e
+winget install --id JesseDuffield.lazygit -e
+winget install --id zig.zig -e          # a C compiler for nvim-treesitter (or install LLVM.LLVM / MSVC)
+# Nerd Font — scoop is the easiest route on Windows:
+#   scoop bucket add nerd-fonts; scoop install JetBrainsMono-NF
+#   (or download from https://www.nerdfonts.com), then set it as your terminal font.
+# curl and tar are built into Windows 10+, so there is nothing to install for those.
+```
+
+> **Nerd Font is a terminal setting, not something Neovim installs.** Install a Nerd Font (e.g. JetBrainsMono) on the host and select it as your terminal emulator's font. On Windows (native or WSL), set the font in **Windows Terminal** / VS Code — not inside the editor.
 
 ### Optional (per language / extra)
 
@@ -88,44 +102,52 @@ Mason installs the language servers, linters and formatters, but it does **not**
 apt:    sudo apt install nodejs npm        # or use nvm/fnm for a current LTS
 brew:   brew install node
 pacman: sudo pacman -S nodejs npm
+winget: winget install --id OpenJS.NodeJS -e
 
 # --- Python 3 + pip + venv ---
 apt:    sudo apt install python3 python3-pip python3-venv
 brew:   brew install python
 pacman: sudo pacman -S python python-pip
+winget: winget install --id Python.Python.3.12 -e
 
 # --- clangd (C/C++) ---
 apt:    sudo apt install clangd            # or: clang-tools
 brew:   brew install llvm                  # clangd ships inside LLVM
 pacman: sudo pacman -S clang
+winget: winget install --id LLVM.LLVM -e   # clangd ships inside LLVM
 
 # --- cmake ---
 apt:    sudo apt install cmake
 brew:   brew install cmake
 pacman: sudo pacman -S cmake
+winget: winget install --id Kitware.CMake -e
 
 # --- ansible + ansible-lint ---
 apt:    sudo apt install ansible ansible-lint
 brew:   brew install ansible ansible-lint
 pacman: sudo pacman -S ansible ansible-lint
+windows: pip install ansible-lint          # a native Ansible control node is Linux/WSL only
 
 # --- gh (GitHub CLI) ---
 apt:    sudo apt install gh                # older releases: add GitHub's apt repo per cli.github.com
 brew:   brew install gh
 pacman: sudo pacman -S github-cli
+winget: winget install --id GitHub.cli -e
 
 # --- gitui ---
 apt:    cargo install gitui                # or a release binary from github.com/gitui-org/gitui
 brew:   brew install gitui
 pacman: sudo pacman -S gitui
+windows: scoop install gitui               # or: cargo install gitui
 
-# --- Claude Code CLI ---
+# --- Claude Code CLI (cross-platform) ---
 any:    npm install -g @anthropic-ai/claude-code   # verify current install at docs.claude.com
 
-# --- Clipboard provider (Linux/WSL only; macOS is built in) ---
-Wayland/WSLg: sudo apt install wl-clipboard   (Arch: sudo pacman -S wl-clipboard)
-X11:          sudo apt install xclip
-classic WSL:  install win32yank.exe from github.com/equalsraf/win32yank, put it on PATH
+# --- Clipboard provider ---
+Linux (Wayland/WSLg): sudo apt install wl-clipboard   (Arch: sudo pacman -S wl-clipboard)
+Linux (X11):          sudo apt install xclip
+classic WSL:          install win32yank.exe from github.com/equalsraf/win32yank, put it on PATH
+Windows / macOS:      nothing to install — the OS clipboard works out of the box
 ```
 
 `dap.core` (nvim-dap) also needs per-language debug adapters (e.g. `debugpy` for Python, `codelldb` for C/C++) and `test.core` (neotest) needs per-language runners (e.g. `pytest`) — these are installed via Mason/pip once the runtime is present.
@@ -134,9 +156,13 @@ classic WSL:  install win32yank.exe from github.com/equalsraf/win32yank, put it 
 
 ## Install on a new computer
 
-This is a **LazyVim** config, so setup is the standard [LazyVim installation](https://lazyvim.github.io/installation) with this repo standing in for the LazyVim starter. You do **not** clone the LazyVim starter separately — cloning this repo and launching Neovim bootstraps `lazy.nvim`, which then installs LazyVim itself and every plugin at the versions pinned in `lazy-lock.json`. This repo **is** the config; `~/.config/nvim` is just a symlink pointing at it.
+This is a **LazyVim** config, so setup is the standard [LazyVim installation](https://lazyvim.github.io/installation) with this repo standing in for the LazyVim starter. You do **not** clone the LazyVim starter separately — cloning this repo and launching Neovim bootstraps `lazy.nvim`, which then installs LazyVim itself and every plugin at the versions pinned in `lazy-lock.json`. This repo **is** the config; Neovim's config directory (`~/.config/nvim` on Linux/macOS, `%LOCALAPPDATA%\nvim` on Windows) is just a symlink/junction pointing at it.
 
 **1. Install the prerequisites** — Neovim **≥ 0.11.2** and the [Core tools](#core) (git, a C compiler, ripgrep, fd, a Nerd Font, lazygit). Nothing below works until these are on the machine; see [Requirements](#requirements) for per-OS commands.
+
+Then follow the steps for your platform.
+
+### Linux / macOS / WSL
 
 **2. Clear any existing Neovim files** — LazyVim expects a clean state on first run. Back up the four Neovim directories if they exist (safe to skip on a brand-new machine that has never run Neovim):
 
@@ -159,13 +185,37 @@ mkdir -p ~/.config
 ln -s ~/nvim-config ~/.config/nvim
 ```
 
-**4. Launch Neovim** — `lazy.nvim` bootstraps itself, installs LazyVim and every plugin, then reads `lazy-lock.json` so you get the exact versions from this repo:
+**4. Launch Neovim** with `nvim`.
 
-```bash
-nvim
+### Windows (native, PowerShell)
+
+Native Windows Neovim reads its config from `%LOCALAPPDATA%\nvim` and stores data/state/cache in `%LOCALAPPDATA%\nvim-data` (two directories, versus four on Linux/macOS).
+
+**2. Clear any existing Neovim files** (safe to skip on a machine that has never run Neovim):
+
+```powershell
+Rename-Item "$env:LOCALAPPDATA\nvim"      nvim.bak      -ErrorAction SilentlyContinue  # config
+Rename-Item "$env:LOCALAPPDATA\nvim-data" nvim-data.bak -ErrorAction SilentlyContinue  # plugins, data, state, cache
 ```
 
-Once syncing finishes:
+**3. Clone this config and link it into place** — a directory junction (`mklink /J`) needs no admin rights:
+
+```powershell
+# SSH shown; use the https URL if you don't have SSH keys on this machine
+git clone git@github.com:K0iNguyen/lazyvim-config.git $HOME\nvim-config
+#   https alternative:
+#   git clone https://github.com/K0iNguyen/lazyvim-config.git $HOME\nvim-config
+
+cmd /c mklink /J "$env:LOCALAPPDATA\nvim" "$HOME\nvim-config"
+#   With Developer Mode on (or an elevated shell) you can use a real symlink instead:
+#   New-Item -ItemType SymbolicLink -Path "$env:LOCALAPPDATA\nvim" -Target "$HOME\nvim-config"
+```
+
+**4. Launch Neovim** with `nvim` — run it in **Windows Terminal** with a Nerd Font set as the profile font, or icons won't render.
+
+### After first launch (any platform)
+
+Let `lazy.nvim` finish syncing — it bootstraps LazyVim and installs every plugin at the versions pinned in `lazy-lock.json`. Then:
 
 - `:checkhealth` — confirm the Neovim version and that ripgrep / fd / node / etc. are detected
 - `:Mason` — install/verify language servers for the languages you use
@@ -179,10 +229,10 @@ To add your own machine-only override on any computer: drop a spec file under `l
 
 ## Syncing your changes
 
-Because `~/.config/nvim` is a symlink into this repo, edits you make from inside Neovim change the repo directly:
+Because Neovim's config directory is a symlink/junction into this repo, edits you make from inside Neovim change the repo directly:
 
 ```bash
-cd ~/nvim-config
+cd ~/nvim-config                 # Windows: cd $HOME\nvim-config
 git add -A && git commit -m "tweak: ..." && git push
 ```
 
