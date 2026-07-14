@@ -2,6 +2,9 @@ return {
   {
     "m00qek/baleia.nvim",
     version = "*",
+    -- baleia ships a test-only git submodule (test/vendor/matcher_combinators.lua)
+    -- that isn't needed at runtime; fetching it breaks the checkout, so skip it.
+    submodules = false,
     config = function()
       local baleia = require("baleia").setup({})
 
