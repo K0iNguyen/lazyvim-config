@@ -30,7 +30,7 @@ Neovim must be **≥ 0.11.2** (a LuaJIT build). The **Core** tools are needed fo
 |---|---|
 | Neovim ≥ 0.11.2 (LuaJIT) | The editor; older versions error on startup |
 | git ≥ 2.19 | lazy.nvim clones plugins with filtered/partial clones |
-| C compiler + make | nvim-treesitter compiles parsers from source |
+| C compiler + make | nvim-treesitter compiles parsers from source; telescope-fzf-native builds `libfzf` ([details](#the-c-toolchain-build-essential-and-its-equivalents)) |
 | curl, unzip | Mason downloads & extracts language servers/tools |
 | ripgrep (`rg`) | Live-grep / project-wide text search |
 | fd | Fast file finding in Telescope & snacks pickers |
@@ -69,7 +69,9 @@ winget install --id Git.Git -e
 winget install --id BurntSushi.ripgrep.MSVC -e
 winget install --id sharkdp.fd -e
 winget install --id JesseDuffield.lazygit -e
-winget install --id zig.zig -e          # a C compiler for nvim-treesitter (or install LLVM.LLVM / MSVC)
+winget install --id zig.zig -e          # a minimal C compiler for nvim-treesitter
+# For the full build-essential equivalent (gcc + make, needed by telescope-fzf-native),
+# see "The C toolchain" below — zig alone does not provide make.
 # Nerd Font — scoop is the easiest route on Windows:
 #   scoop bucket add nerd-fonts; scoop install JetBrainsMono-NF
 #   (or download from https://www.nerdfonts.com), then set it as your terminal font.
@@ -77,6 +79,29 @@ winget install --id zig.zig -e          # a C compiler for nvim-treesitter (or i
 ```
 
 > **Nerd Font is a terminal setting, not something Neovim installs.** Install a Nerd Font (e.g. JetBrainsMono) on the host and select it as your terminal emulator's font. On Windows (native or WSL), set the font in **Windows Terminal** / VS Code — not inside the editor.
+
+### The C toolchain (`build-essential` and its equivalents)
+
+Some plugins compile native code at install time: nvim-treesitter builds parsers, and `telescope-fzf-native` builds `libfzf.so` / `libfzf.dll`. Both need a real C compiler **and** `make` — the set Debian bundles as `build-essential`. Every platform has an equivalent:
+
+| Platform | Install | What it gives you |
+|---|---|---|
+| Debian / Ubuntu / WSL | `sudo apt install build-essential` | gcc, g++, make, libc headers |
+| Arch | `sudo pacman -S base-devel` | gcc, make, autotools, pkg-config |
+| macOS | `xcode-select --install` | clang, make (Command Line Tools) |
+| Windows — MSYS2 (GCC) | `pacman -S base-devel mingw-w64-ucrt-x86_64-toolchain` | make + autotools, **and** gcc, g++, gdb, binutils |
+| Windows — Microsoft | `winget install --id Microsoft.VisualStudio.2022.BuildTools -e` | MSVC (`cl.exe`), Windows SDK, MSBuild, CMake |
+
+**On Windows, MSYS2 needs two packages where Debian needs one.** Debian's `build-essential` pulls the compiler and the build tooling together; MSYS2 keeps them in separate repos and you need both:
+
+- **`base-devel`** — the MSYS-side build tooling (make, autoconf, automake, libtool, pkg-config, patch). It's a *meta-package*, not a group, so `pacman -Qg base-devel` prints nothing even when it's installed — check with `pacman -Q base-devel` instead.
+- **`mingw-w64-ucrt-x86_64-toolchain`** — the actual native compiler (gcc, g++, gdb, binutils, and `mingw32-make`). `base-devel` on its own gives you no compiler.
+
+Then put both on your **Windows** PATH so Neovim can see them — `C:\msys64\ucrt64\bin` (gcc) and `C:\msys64\usr\bin` (make). MSYS2's own shell sets this up internally, but Neovim isn't launched from that shell and doesn't inherit it.
+
+> **Gotcha: two different `make`s end up on PATH.** MSYS2 ships `usr\bin\make.exe`, linked against `msys-2.0.dll` — the Cygwin runtime, which rewrites `/flag`-style arguments into Windows paths on the way to native programs. It also ships `ucrt64\bin\mingw32-make.exe`, a native build that does no such rewriting. Anything searching PATH for the plain name `make` finds the MSYS one first.
+>
+> That is exactly what `lua/plugins/telescope.lua` works around. LazyVim's telescope extra searches for `make`, gets the MSYS one, and the fzf-native Makefile — seeing `MSYSTEM` unset, because Neovim wasn't started from an MSYS2 shell — decides it is *not* under MSYS2 and picks a `cmd.exe` mkdir. MSYS2 then mangles that command's flag, cmd opens an interactive prompt and exits 0 without creating `build/`, and gcc dies with `cannot open output file build/libfzf.dll`. Passing `MSYSTEM=UCRT64` tells the Makefile the truth and it uses `mkdir -p` instead.
 
 ### Optional (per language / extra)
 
