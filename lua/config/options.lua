@@ -3,6 +3,10 @@
 -- Add any additional options here
 vim.opt.undofile = true
 
+-- markdown-preview.nvim: keep preview tabs open when switching buffers,
+-- so multiple markdown files can be previewed at once (one browser tab each)
+vim.g.mkdp_auto_close = 0
+
 -- Use PowerShell instead of cmd.exe for :terminal and :! (see :h shell-powershell)
 if vim.fn.has("win32") == 1 then
   vim.opt.shell = vim.fn.executable("pwsh") == 1 and "pwsh" or "powershell"
